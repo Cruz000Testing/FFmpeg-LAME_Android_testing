@@ -28,6 +28,11 @@ jobs:
       with:
         ndk-version: ${{ env.NDK_VERSION }}
         add-to-path: true
+        
+    - name: Verify NDK
+      run: |
+        echo "NDK Path: $ANDROID_NDK_HOME"
+        ls -la $ANDROID_NDK_HOME/toolchains
 
     # Dependencies
     - name: Install build tools
@@ -46,7 +51,7 @@ jobs:
     # Download LAME
     - name: Download and extract LAME
       run: |
-        wget "https://sourceforge.net/projects/lame/files/lame/$LAME_VERSION/lame-$LAME_VERSION.tar.gz" -O lame.tar.gz
+        wget https://downloads.sourceforge.net/project/lame/lame/${{ env.LAME_VERSION }}/lame-${{ env.LAME_VERSION }}.tar.gz -O lame.tar.gz
         tar -xzf lame.tar.gz
         mv lame-$LAME_VERSION lame
         rm lame.tar.gz
@@ -65,12 +70,14 @@ jobs:
         mkdir -p ffmpeg-build
 
     # Build
-    - name: Build FFmpeg with LAME
+    - name: Build with debug
       run: |
-        set -e
-        echo "Building for ${{ matrix.arch }}"
-        chmod +x ./android.sh
-        ./android.sh ${{ matrix.arch }}
+        set -x
+        echo "=== Pre-build verification ==="
+        ls -la lame ffmpeg
+        ./android.sh "${{ matrix.arch }}" 2>&1 | tee build.log
+        echo "=== Build artifacts ==="
+        find . -name "*.so" -o -name "*.a" | xargs ls -la
 
     - name: Verify FFmpeg binary and LAME
       run: |
