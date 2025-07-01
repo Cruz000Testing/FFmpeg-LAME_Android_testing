@@ -102,74 +102,103 @@ arch_template() {
 }
 
 compile_function() {
-    echo "=== Compiling $TARGET_APP ==="
     export TARGET_APP_SOURCE_DIR="${TARGET_APP}_SOURCE_DIR"
     
-    # Verificación esencial
-    if [ -z "${!TARGET_APP_SOURCE_DIR}" ]; then
-        echo "ERROR: Variable ${TARGET_APP_SOURCE_DIR} no está definida"
+    # Debug: Mostrar variables clave
+    echo "=== Compilando ${TARGET_APP} ==="
+    echo "Directorio Fuente: ${!TARGET_APP_SOURCE_DIR}"
+    echo "Prefijo de Instalación: ${PREFIX}"
+    echo "Compilador: ${CC}"
+    
+    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "❌ Error al entrar a ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
+
+    # Obtener configuración
+    local CONFIG_VAR="CONFIGURE_${TARGET_APP}"
+    local CONFIG="${!CONFIG_VAR}"
+    
+    echo "=== Configuración Aplicada ==="
+    echo "${CONFIG}"
+    echo "============================="
+    
+    # Ejecutar con evaluación segura
+    echo "🛠️  Ejecutando configuración..."
+    eval "${CONFIG}" 2>&1 | tee configure.log
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        echo "❌ Error en configuración"
+        cat configure.log
         exit 1
     fi
-
-    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Fallo al entrar a ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
-
-    # Debug: Mostrar configuración
-    eval "CONFIG=\$CONFIGURE_${TARGET_APP}"
-    echo "=== Configuración aplicada ==="
-    echo "$CONFIG"
-
-    # Ejecutar con logging detallado
-    eval "$CONFIG" | tee configure.log
-    make clean
-    make -j$(nproc) V=1 | tee build.log
-    make install | tee install.log
     
-    echo "=== Archivos generados ==="
-    find "$PREFIX" -type f | xargs ls -la
+    # Compilación
+    echo "🔨 Compilando..."
+    make clean
+    make -j$(nproc) V=1 2>&1 | tee build.log
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        echo "❌ Error en compilación"
+        cat build.log
+        exit 1
+    fi
+    
+    # Instalación
+    echo "📦 Instalando..."
+    mkdir -p "${PREFIX}" || echo "⚠️  No se pudo crear ${PREFIX}"
+    make install 2>&1 | tee install.log
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        echo "❌ Error en instalación"
+        cat install.log
+        exit 1
+    fi
+    
+    echo "✅ ${TARGET_APP} compilado exitosamente"
+    find "${PREFIX}" -type f | xargs ls -la
 }
 
-read -r -d '' CONFIGURE_LAME << 'EOF'
+# Configuración de LAME (versión robusta)
+CONFIGURE_LAME=$(cat << 'END'
 ./configure \
-    --host=${CLANG_PREFIX} \
-    --prefix=$PREFIX \
+    --host="${CLANG_PREFIX}" \
+    --prefix="${PREFIX}" \
     --disable-shared \
     --enable-static \
     --disable-frontend \
     --disable-nasm \
-    CFLAGS="$COMMON_CFLAGS $EXTRA_CFLAGS" \
-    CPPFLAGS="-I$TOOLCHAIN_SYSROOT/usr/include" \
-    LDFLAGS="$COMMON_LDFLAGS"
-EOF
+    CFLAGS="${COMMON_CFLAGS} ${EXTRA_CFLAGS}" \
+    CPPFLAGS="-I${TOOLCHAIN_SYSROOT}/usr/include" \
+    LDFLAGS="${COMMON_LDFLAGS}"
+END
+)
 
 FFMPEG_COMMON_EXTRA_CFLAGS="$COMMON_CFLAGS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security"
 FFMPEG_COMMON_EXTRA_CXXFLAGS=$FFMPEG_COMMON_EXTRA_CFLAGS
 
-read -r -d '' CONFIGURE_FFMPEG << 'EOF'
-EXTRA_CXXFLAGS=$EXTRA_CFLAGS
-LAME_PREFIX=${LAME_BUILD_DIR}/$ANDROID_API_LEVEL/$ARCH_PREFIX
+# Configuración de FFmpeg (versión robusta)
+CONFIGURE_FFMPEG=$(cat << 'END'
+EXTRA_CXXFLAGS="${EXTRA_CFLAGS}"
+LAME_PREFIX="${LAME_BUILD_DIR}/${ANDROID_API_LEVEL}/${ARCH_PREFIX}"
 ./configure \
     --disable-everything \
     --target-os=android \
-    --arch=$TARGET_ARCH \
-    --cpu=$TARGET_CPU \
+    --arch="${TARGET_ARCH}" \
+    --cpu="${TARGET_CPU}" \
     --enable-cross-compile \
-    --cross-prefix="$CROSS_PREFIX" \
-    --cc="$CC" \
-    --cxx="$CXX" \
-    --sysroot="$TOOLCHAIN_SYSROOT" \
-    --prefix="$PREFIX" \
-    --extra-cflags="$FFMPEG_COMMON_EXTRA_CFLAGS $EXTRA_CFLAGS -I$LAME_PREFIX/include" \
-    --extra-cxxflags="$FFMPEG_COMMON_EXTRA_CXXFLAGS -std=c++17 -fexceptions -frtti $EXTRA_CXXFLAGS" \
-    --extra-ldflags=" -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments $COMMON_LDFLAGS -L$LAME_PREFIX/lib -lmp3lame" \
+    --cross-prefix="${CROSS_PREFIX}" \
+    --cc="${CC}" \
+    --cxx="${CXX}" \
+    --sysroot="${TOOLCHAIN_SYSROOT}" \
+    --prefix="${PREFIX}" \
+    --extra-cflags="${FFMPEG_COMMON_EXTRA_CFLAGS} ${EXTRA_CFLAGS} -I${LAME_PREFIX}/include" \
+    --extra-cxxflags="${FFMPEG_COMMON_EXTRA_CXXFLAGS} -std=c++17 -fexceptions -frtti ${EXTRA_CXXFLAGS}" \
+    --extra-ldflags="-Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments ${COMMON_LDFLAGS} -L${LAME_PREFIX}/lib -lmp3lame" \
     --enable-pic \
     ${ENABLED_CONFIG} \
     ${DISABLED_CONFIG} \
-    --ar="$AR" \
-    --nm="$NM" \
-    --ranlib="$RANLIB" \
-    --strip="$STRIP" \
+    --ar="${AR}" \
+    --nm="${NM}" \
+    --ranlib="${RANLIB}" \
+    --strip="${STRIP}" \
     ${EXTRA_CONFIG}
-EOF
+END
+)
 
 for ARCH in "${ARCH_LIST[@]}"; do
     case "$ARCH" in
