@@ -72,9 +72,9 @@ jobs:
 
     - name: Verify FFmpeg
       run: |
-        echo "=== FFmpeg binary ==="
-        file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg"
-        "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg" -version
+        echo "=== FFmpeg libraries ==="
+        ls -la "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
+        file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.a
 
     # Upload artifacts
     - name: Upload FFmpeg artifacts
