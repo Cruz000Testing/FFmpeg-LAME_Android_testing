@@ -46,7 +46,7 @@ jobs:
     # Download LAME
     - name: Download and extract LAME
       run: |
-        wget "https://sourceforge.net/projects/lame/files/lame/$LAME_VERSION/lame-$LAME_VERSION.tar.gz" -O lame.tar.gz
+        wget https://downloads.sourceforge.net/project/lame/lame/${{ env.LAME_VERSION }}/lame-${{ env.LAME_VERSION }}.tar.gz -O lame.tar.gz
         tar -xzf lame.tar.gz
         mv lame-$LAME_VERSION lame
         rm lame.tar.gz
