@@ -91,15 +91,36 @@ arch_template() {
 
 compile_function() {
     export TARGET_APP_SOURCE_DIR="${TARGET_APP}_SOURCE_DIR"
-    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Failed to change directory"; exit 1; }
+    
+    # Debug: Verificar variables críticas
+    echo "=== Debug: Compiling $TARGET_APP ==="
+    echo "Source Dir: ${!TARGET_APP_SOURCE_DIR}"
+    echo "Build Dir: $PREFIX"
+    echo "CC: $CC"
+    
+    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Failed to change directory to ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
 
+    # Debug: Mostrar configuración que se aplicará
     eval "CONFIG=\$CONFIGURE_${TARGET_APP}"
-    echo "Executing configuration for ${TARGET_APP}"
-    eval "$CONFIG" || { echo "Configuration failed"; exit 1; }
+    echo "=== Configuration to apply ==="
+    echo "$CONFIG"
+    
+    # Aplicar configuración con verbosity
+    echo "Executing configuration..."
+    eval "$CONFIG" || { echo "Configuration failed for $TARGET_APP"; exit 1; }
 
+    # Compilación con log detallado
+    echo "Starting build process..."
     make clean
-    make -j$(nproc) || { echo "Build failed"; exit 1; }
-    make install || { echo "Installation failed"; exit 1; }
+    make -j$(nproc) V=1 || { echo "Build failed for $TARGET_APP"; exit 1; }
+    
+    echo "Installing to $PREFIX..."
+    mkdir -p "$PREFIX" || echo "Failed to create prefix directory"
+    make install || { echo "Installation failed for $TARGET_APP"; exit 1; }
+    
+    # Verificación post-instalación
+    echo "=== Build artifacts ==="
+    find "$PREFIX" -type f | xargs ls -la
 }
 
 read -r -d '' CONFIGURE_LAME << 'EOF'
