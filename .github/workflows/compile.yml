@@ -68,7 +68,13 @@ jobs:
         echo "FFMPEG_SOURCE_DIR=$GITHUB_WORKSPACE/ffmpeg" >> $GITHUB_ENV
         echo "FFMPEG_BUILD_DIR=$GITHUB_WORKSPACE/ffmpeg-build" >> $GITHUB_ENV
         mkdir -p ffmpeg-build
-
+        
+    - name: Set executable permissions
+      run: |
+        ls -la android.sh  # Verifica permisos actuales
+        chmod +x android.sh
+        ls -la android.sh  # Verifica que ahora tenga +x
+        
     # Build
     - name: Build with debug
       run: |
