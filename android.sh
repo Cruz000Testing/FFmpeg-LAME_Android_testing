@@ -1,21 +1,24 @@
 #!/bin/bash
-set -ex  # Habilita modo debug y termina en primer error
+set -euo pipefail
 
-echo "=== Environment Verification ==="
-echo "NDK Path: $ANDROID_NDK_HOME"
-echo "LAME_SOURCE_DIR: $LAME_SOURCE_DIR"
-echo "FFMPEG_SOURCE_DIR: $FFMPEG_SOURCE_DIR"
+# --- Modo de operación ---
+# 1. Si recibe parámetro: compila SOLO esa arquitectura
+# 2. Sin parámetros: compila todas (para ejecución local)
 
-# Al inicio del script
-echo "Parámetros recibidos: $@"
 if [ $# -eq 1 ]; then
-    echo "Usando arquitectura pasada como parámetro: $1"
+    echo "🔧 Modo CI: Compilando arquitectura única $1"
     ARCH_LIST=("$1")
 else
-    echo "Usando arquitecturas por defecto"
-    ARCH_LIST=("armv8a" "armv7a" "x86" "x86-64")
+    echo "🔧 Modo local: Compilando todas las arquitecturas"
+    ARCH_LIST=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 fi
-echo "ARCH_LIST = ${ARCH_LIST[@]}"
+
+# [Resto del script...]
+for ARCH in "${ARCH_LIST[@]}"; do
+    case "$ARCH" in
+        # Tus cases existentes...
+    esac
+done
 
 # Verifica existencia de directorios
 [ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
