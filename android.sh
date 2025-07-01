@@ -13,13 +13,6 @@ else
     ARCH_LIST=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 fi
 
-# [Resto del script...]
-for ARCH in "${ARCH_LIST[@]}"; do
-    case "$ARCH" in
-        # Tus cases existentes...
-    esac
-done
-
 # Verifica existencia de directorios
 [ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
 [ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
@@ -233,7 +226,7 @@ for ARCH in "${ARCH_LIST[@]}"; do
             template_FFMPEG=("aarch64" "armv8-a" "aarch64" "" " -march=armv8-a -mcpu=cortex-a75" "--enable-neon --enable-asm" "arm64-v8a") ;;
             
         "armv7-a"|"armeabi-v7a"|"armv7a")
-            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "" "armeabi-v7a")
+            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "" "armeabi-v7a")
             template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
             
         "x86-64"|"x86_64")
