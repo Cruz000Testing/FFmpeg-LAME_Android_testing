@@ -1,4 +1,16 @@
 #!/bin/bash
+set -ex  # Habilita modo debug y termina en primer error
+
+echo "=== Environment Verification ==="
+echo "NDK Path: $ANDROID_NDK_HOME"
+echo "LAME_SOURCE_DIR: $LAME_SOURCE_DIR"
+echo "FFMPEG_SOURCE_DIR: $FFMPEG_SOURCE_DIR"
+
+# Verifica existencia de directorios
+[ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
+[ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
+
+# Continúa con el resto del script...
 
 ### Configuration Notes ###
 # Android API level and target architectures are now defined in compile.yml
@@ -90,36 +102,29 @@ arch_template() {
 }
 
 compile_function() {
+    echo "=== Compiling $TARGET_APP ==="
     export TARGET_APP_SOURCE_DIR="${TARGET_APP}_SOURCE_DIR"
     
-    # Debug: Verificar variables críticas
-    echo "=== Debug: Compiling $TARGET_APP ==="
-    echo "Source Dir: ${!TARGET_APP_SOURCE_DIR}"
-    echo "Build Dir: $PREFIX"
-    echo "CC: $CC"
-    
-    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Failed to change directory to ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
+    # Verificación esencial
+    if [ -z "${!TARGET_APP_SOURCE_DIR}" ]; then
+        echo "ERROR: Variable ${TARGET_APP_SOURCE_DIR} no está definida"
+        exit 1
+    fi
 
-    # Debug: Mostrar configuración que se aplicará
+    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Fallo al entrar a ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
+
+    # Debug: Mostrar configuración
     eval "CONFIG=\$CONFIGURE_${TARGET_APP}"
-    echo "=== Configuration to apply ==="
+    echo "=== Configuración aplicada ==="
     echo "$CONFIG"
-    
-    # Aplicar configuración con verbosity
-    echo "Executing configuration..."
-    eval "$CONFIG" || { echo "Configuration failed for $TARGET_APP"; exit 1; }
 
-    # Compilación con log detallado
-    echo "Starting build process..."
+    # Ejecutar con logging detallado
+    eval "$CONFIG" | tee configure.log
     make clean
-    make -j$(nproc) V=1 || { echo "Build failed for $TARGET_APP"; exit 1; }
+    make -j$(nproc) V=1 | tee build.log
+    make install | tee install.log
     
-    echo "Installing to $PREFIX..."
-    mkdir -p "$PREFIX" || echo "Failed to create prefix directory"
-    make install || { echo "Installation failed for $TARGET_APP"; exit 1; }
-    
-    # Verificación post-instalación
-    echo "=== Build artifacts ==="
+    echo "=== Archivos generados ==="
     find "$PREFIX" -type f | xargs ls -la
 }
 
