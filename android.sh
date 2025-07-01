@@ -14,8 +14,8 @@ else
 fi
 
 # Verifica existencia de directorios
-[ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
-[ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
+#[ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
+#[ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
 
 # Continúa con el resto del script...
 
