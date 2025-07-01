@@ -200,7 +200,16 @@ LAME_PREFIX="${LAME_BUILD_DIR}/${ANDROID_API_LEVEL}/${ARCH_PREFIX}"
 END
 )
 
+# Después de definir CONFIGURE_FFMPEG
+echo "=== Verificación Final Antes del Bucle ==="
+echo "ARCH_LIST: ${ARCH_LIST[@]}"
+echo "Número de arquitecturas: ${#ARCH_LIST[@]}"
+echo "API Level: $ANDROID_API_LEVEL"
+
+# Antes del bucle
+echo "=== INICIANDO BUCLE DE COMPILACIÓN ==="
 for ARCH in "${ARCH_LIST[@]}"; do
+    echo "🛠️  Procesando arquitectura: $ARCH"
     case "$ARCH" in
         "armv8-a"|"aarch64"|"arm64-v8a"|"armv8a")
             template_LAME=("aarch64" "" "aarch64" "" " -march=armv8-a" "" "arm64-v8a")
