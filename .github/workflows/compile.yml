@@ -76,14 +76,15 @@ jobs:
         ls -la android.sh  # Verifica que ahora tenga +x
         
     # Build
-    - name: Build with debug
+    - name: Build FFmpeg with LAME
       run: |
         set -x
-        echo "=== Pre-build verification ==="
-        ls -la lame ffmpeg
-        ./android.sh "${{ matrix.arch }}" 2>&1 | tee build.log
-        echo "=== Build artifacts ==="
-        find . -name "*.so" -o -name "*.a" | xargs ls -la
+        echo "Parametro arch: ${{ matrix.arch }}"
+        ./android.sh "${{ matrix.arch }}"
+        
+        # Verificación extrema
+        echo "=== Estado del directorio después del script ==="
+        find . -type d | grep -E "ffmpeg-build|lame-build"
 
     - name: Verify FFmpeg binary and LAME
       run: |
