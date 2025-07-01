@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 
 # --- Modo de operación ---
 # 1. Si recibe parámetro: compila SOLO esa arquitectura
@@ -12,12 +11,6 @@ else
     echo "🔧 Modo local: Compilando todas las arquitecturas"
     ARCH_LIST=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
 fi
-
-# Verifica existencia de directorios
-#[ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
-#[ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
-
-# Continúa con el resto del script...
 
 ### Configuration Notes ###
 # Android API level and target architectures are now defined in compile.yml
@@ -110,132 +103,43 @@ arch_template() {
 
 compile_function() {
     export TARGET_APP_SOURCE_DIR="${TARGET_APP}_SOURCE_DIR"
-    
-    # Debug: Mostrar variables clave
-    echo "=== Compilando ${TARGET_APP} ==="
-    echo "Directorio Fuente: ${!TARGET_APP_SOURCE_DIR}"
-    echo "Prefijo de Instalación: ${PREFIX}"
-    echo "Compilador: ${CC}"
-    
-    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "❌ Error al entrar a ${!TARGET_APP_SOURCE_DIR}"; exit 1; }
+    cd "${!TARGET_APP_SOURCE_DIR}" || { echo "Failed to change directory"; exit 1; }
 
-    # Obtener configuración
-    local CONFIG_VAR="CONFIGURE_${TARGET_APP}"
-    local CONFIG="${!CONFIG_VAR}"
-    
-    echo "=== Configuración Aplicada ==="
-    echo "${CONFIG}"
-    echo "============================="
-    
-    # Verificar que el compilador funciona
-    echo "int main() { return 0; }" > test.c
-    if ! $CC test.c -o test; then
-        echo "❌ El compilador no funciona"
-        $CC -v
-        exit 1
-    fi
-    
-    # Ejecutar con evaluación segura
-    echo "🛠️  Ejecutando configuración..."
-    eval "${CONFIG}" 2>&1 | tee configure.log
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
-        echo "❌ Error en configuración"
-        cat configure.log
-        exit 1
-    fi
-    
-    # Compilación
-    echo "🔨 Compilando..."
+    eval "CONFIG=\$CONFIGURE_${TARGET_APP}"
+    echo "Executing configuration for ${TARGET_APP}"
+    eval "$CONFIG" || { echo "Configuration failed"; exit 1; }
+
     make clean
-    make -j$(nproc) V=1 2>&1 | tee build.log
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
-        echo "❌ Error en compilación"
-        cat build.log
-        exit 1
-    fi
-    
-    # Instalación
-    echo "📦 Instalando..."
-    mkdir -p "${PREFIX}" || echo "⚠️  No se pudo crear ${PREFIX}"
-    make install 2>&1 | tee install.log
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
-        echo "❌ Error en instalación"
-        cat install.log
-        exit 1
-    fi
-    
-    echo "✅ ${TARGET_APP} compilado exitosamente"
-    find "${PREFIX}" -type f | xargs ls -la
+    make -j$(nproc) || { echo "Build failed"; exit 1; }
+    make install || { echo "Installation failed"; exit 1; }
 }
 
-# Configuración de LAME (versión robusta)
 read -r -d '' CONFIGURE_LAME << 'EOF'
 ./configure \
-    --host="${CLANG_PREFIX}" \
-    --prefix="${PREFIX}" \
+    --host=${CLANG_PREFIX} \
+    --prefix="$PREFIX" \
     --disable-shared \
     --enable-static \
     --disable-frontend \
-    --disable-nasm
+    --disable-nasm \
+    CFLAGS="$COMMON_CFLAGS $EXTRA_CFLAGS" \
+    CPPFLAGS="-I$TOOLCHAIN_SYSROOT/usr/include" \
+    LDFLAGS="$COMMON_LDFLAGS"
 EOF
 
-FFMPEG_COMMON_EXTRA_CFLAGS="$COMMON_CFLAGS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security"
-FFMPEG_COMMON_EXTRA_CXXFLAGS=$FFMPEG_COMMON_EXTRA_CFLAGS
-
-# Configuración de FFmpeg (versión robusta)
-read -r -d '' CONFIGURE_LAME << 'EOF'
-EXTRA_CXXFLAGS="${EXTRA_CFLAGS}"
-LAME_PREFIX="${LAME_BUILD_DIR}/${ANDROID_API_LEVEL}/${ARCH_PREFIX}"
-./configure \
-    --disable-everything \
-    --target-os=android \
-    --arch="${TARGET_ARCH}" \
-    --cpu="${TARGET_CPU}" \
-    --enable-cross-compile \
-    --cross-prefix="${CROSS_PREFIX}" \
-    --cc="${CC}" \
-    --cxx="${CXX}" \
-    --sysroot="${TOOLCHAIN_SYSROOT}" \
-    --prefix="${PREFIX}" \
-    --extra-cflags="${FFMPEG_COMMON_EXTRA_CFLAGS} ${EXTRA_CFLAGS} -I${LAME_PREFIX}/include" \
-    --extra-cxxflags="${FFMPEG_COMMON_EXTRA_CXXFLAGS} -std=c++17 -fexceptions -frtti ${EXTRA_CXXFLAGS}" \
-    --extra-ldflags="-Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments ${COMMON_LDFLAGS} -L${LAME_PREFIX}/lib -lmp3lame" \
-    --enable-pic \
-    ${ENABLED_CONFIG} \
-    ${DISABLED_CONFIG} \
-    --ar="${AR}" \
-    --nm="${NM}" \
-    --ranlib="${RANLIB}" \
-    --strip="${STRIP}" \
-    ${EXTRA_CONFIG}
-EOF
-
-# Después de definir CONFIGURE_FFMPEG
-echo "=== Verificación Final Antes del Bucle ==="
-echo "ARCH_LIST: ${ARCH_LIST[@]}"
-echo "Número de arquitecturas: ${#ARCH_LIST[@]}"
-echo "API Level: $ANDROID_API_LEVEL"
-
-# Antes del bucle
-echo "=== INICIANDO BUCLE DE COMPILACIÓN ==="
 for ARCH in "${ARCH_LIST[@]}"; do
-    echo "🛠️  Procesando arquitectura: $ARCH"
     case "$ARCH" in
         "armv8-a"|"aarch64"|"arm64-v8a"|"armv8a")
-            template_LAME=("aarch64" "" "aarch64" "" " -march=armv8-a" "" "arm64-v8a")
-            template_FFMPEG=("aarch64" "armv8-a" "aarch64" "" " -march=armv8-a -mcpu=cortex-a75" "--enable-neon --enable-asm" "arm64-v8a") ;;
+            template_LAME=("aarch64" "" "aarch64" "" " -march=armv8-a" "" "arm64-v8a") ;;
             
         "armv7-a"|"armeabi-v7a"|"armv7a")
-            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "" "armeabi-v7a")
-            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
+            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "" "armeabi-v7a") ;;
             
         "x86-64"|"x86_64")
-            template_LAME=("x86_64" "" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64")
-            template_FFMPEG=("x86_64" "x86-64" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
+            template_LAME=("x86_64" "" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
             
         "x86"|"i686")
-            template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86")
-            template_FFMPEG=("i686" "i686" "i686" "" " -march=core2 -msse3" "--disable-asm" "x86") ;;
+            template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86") ;;
             
         * )
             echo "Unknown architecture: $ARCH"
@@ -243,7 +147,4 @@ for ARCH in "${ARCH_LIST[@]}"; do
     esac
     arch_template "LAME" "${template_LAME[@]}"
     compile_function
-    
-    #arch_template "FFMPEG" "${template_FFMPEG[@]}"
-    #compile_function
 done
