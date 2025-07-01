@@ -81,10 +81,6 @@ jobs:
         set -x
         echo "Parametro arch: ${{ matrix.arch }}"
         ./android.sh "${{ matrix.arch }}"
-        
-        # Verificación extrema
-        echo "=== Estado del directorio después del script ==="
-        find . -type d | grep -E "ffmpeg-build|lame-build"
 
     - name: Verify FFmpeg binary and LAME
       run: |
@@ -92,16 +88,11 @@ jobs:
         ls -la "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
         file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.so
 
-        echo "=== FFmpeg binary ==="
-        file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg"
-        "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg" -version
-
     # Upload artifacts
     - name: Upload FFmpeg artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ffmpeg-${{ matrix.arch }}
         path: |
-          ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}
           lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}
         compression-level: 9
