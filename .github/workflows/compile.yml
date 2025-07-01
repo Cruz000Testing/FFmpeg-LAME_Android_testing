@@ -69,7 +69,7 @@ jobs:
       run: |
         set -x
         echo "Building for ${{ matrix.arch }}"
-        chmod +x ./android.sh
+        chmod +x android.sh
         ./android.sh "${{ matrix.arch }}"
 
     - name: Verify FFmpeg and LAME libraries
