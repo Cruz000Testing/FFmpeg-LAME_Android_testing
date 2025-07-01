@@ -28,8 +28,6 @@ ENABLED_CONFIG="\
     --enable-avutil \
     --enable-muxer=mp3 \
     --enable-gpl \
-    --enable-encoder=libmp3lame \
-    --enable-libmp3lame \
     --enable-demuxer=mov \
     --enable-demuxer=matroska \
     --enable-parser=aac \
@@ -126,7 +124,7 @@ for ARCH in "${ARCH_LIST[@]}"; do
             template_FFMPEG=("aarch64" "armv8-a" "aarch64" "" " -march=armv8-a -mcpu=cortex-a75" "--enable-neon --enable-asm" "arm64-v8a") ;;
             
         "armv7-a"|"armeabi-v7a"|"armv7a")
-            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
+            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
             
         "x86-64"|"x86_64")
             template_FFMPEG=("x86_64" "x86-64" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
