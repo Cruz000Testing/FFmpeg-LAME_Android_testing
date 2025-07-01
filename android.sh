@@ -6,6 +6,17 @@ echo "NDK Path: $ANDROID_NDK_HOME"
 echo "LAME_SOURCE_DIR: $LAME_SOURCE_DIR"
 echo "FFMPEG_SOURCE_DIR: $FFMPEG_SOURCE_DIR"
 
+# Al inicio del script
+echo "Parámetros recibidos: $@"
+if [ $# -eq 1 ]; then
+    echo "Usando arquitectura pasada como parámetro: $1"
+    ARCH_LIST=("$1")
+else
+    echo "Usando arquitecturas por defecto"
+    ARCH_LIST=("armv8a" "armv7a" "x86" "x86-64")
+fi
+echo "ARCH_LIST = ${ARCH_LIST[@]}"
+
 # Verifica existencia de directorios
 [ -d "$LAME_SOURCE_DIR" ] || { echo "Error: LAME source missing"; exit 1; }
 [ -d "$FFMPEG_SOURCE_DIR" ] || { echo "Error: FFmpeg source missing"; exit 1; }
