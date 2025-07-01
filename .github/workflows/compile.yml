@@ -52,24 +52,29 @@ jobs:
         rm lame.tar.gz
         echo "LAME_SOURCE_DIR=$GITHUB_WORKSPACE/lame" >> $GITHUB_ENV
 
-        mkdir -p lame-build
-        echo "LAME_BUILD_DIR=$GITHUB_WORKSPACE/lame-build" >> $GITHUB_ENV
-
     # Clone FFmpeg
     - name: Clone FFmpeg
       run: |
         git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
         echo "FFMPEG_SOURCE_DIR=$GITHUB_WORKSPACE/ffmpeg" >> $GITHUB_ENV
 
+    - name: Create build directories
+      run: |
+        mkdir -p lame-build
+        echo "LAME_BUILD_DIR=$GITHUB_WORKSPACE/lame-build" >> $GITHUB_ENV
+
         mkdir -p ffmpeg-build
         echo "FFMPEG_BUILD_DIR=$GITHUB_WORKSPACE/ffmpeg-build" >> $GITHUB_ENV
 
+    - name: Set executable permissions
+      run: |
+        chmod +x android.sh
+      
     # Build
     - name: Build FFmpeg with LAME
       run: |
         set -x
         echo "Building for ${{ matrix.arch }}"
-        chmod +x android.sh
         ./android.sh "${{ matrix.arch }}"
 
     - name: Verify FFmpeg and LAME libraries
