@@ -48,42 +48,39 @@ jobs:
           git \
           wget
 
-    # Download LAME
-    - name: Download and extract LAME
+    # Clone FFmpeg
+    - name: Clone FFmpeg
       run: |
-        wget https://downloads.sourceforge.net/project/lame/lame/${{ env.LAME_VERSION }}/lame-${{ env.LAME_VERSION }}.tar.gz -O lame.tar.gz
-        tar -xzf lame.tar.gz
-        mv lame-$LAME_VERSION lame
-        rm lame.tar.gz
-        echo "LAME_SOURCE_DIR=$GITHUB_WORKSPACE/lame" >> $GITHUB_ENV
+        git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+        echo "FFMPEG_SOURCE_DIR=$GITHUB_WORKSPACE/ffmpeg" >> $GITHUB_ENV
 
     - name: Create build lame directory
       run: |
-        mkdir -p lame-build
-        echo "LAME_BUILD_DIR=$GITHUB_WORKSPACE/lame-build" >> $GITHUB_ENV
+        mkdir -p ffmpeg-build
+        echo "FFMPEG_BUILD_DIR=$GITHUB_WORKSPACE/ffmpeg-build" >> $GITHUB_ENV
         
     - name: Set executable permissions
       run: |
         chmod +x android.sh
         
     # Build
-    - name: Build LAME
+    - name: Build FFmpeg
       run: |
         set -x
         echo "Parametro arch: ${{ matrix.arch }}"
         ./android.sh "${{ matrix.arch }}"
 
-    - name: Verify LAME
+    - name: Verify FFmpeg
       run: |
-        echo "=== LAME libraries ==="
-        ls -la "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
-        file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.a
+        echo "=== FFmpeg binary ==="
+        file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg"
+        "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg" -version
 
     # Upload artifacts
     - name: Upload FFmpeg artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: lame-${{ matrix.arch }}
+        name: ffmpeg-${{ matrix.arch }}
         path: |
-          lame-build/${{ env.ANDROID_API_LEVEL }}/${{ matrix.arch }}
+          ffmpeg-build/${{ env.ANDROID_API_LEVEL }}/${{ matrix.arch }}
         compression-level: 9
