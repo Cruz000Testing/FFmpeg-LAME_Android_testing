@@ -71,9 +71,6 @@ jobs:
         echo "Building for ${{ matrix.arch }}"
         chmod +x ./android.sh
         ./android.sh ${{ matrix.arch }}
-        
-        # Verify build
-        ls -la ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib
 
     - name: Verify FFmpeg binary and LAME
       run: |
