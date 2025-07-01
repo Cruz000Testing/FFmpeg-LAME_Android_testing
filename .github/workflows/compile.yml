@@ -28,11 +28,6 @@ jobs:
       with:
         ndk-version: ${{ env.NDK_VERSION }}
         add-to-path: true
-        
-    - name: Verify NDK
-      run: |
-        echo "NDK Path: $ANDROID_NDK_HOME"
-        ls -la $ANDROID_NDK_HOME/toolchains
 
     # Dependencies
     - name: Install build tools
@@ -48,30 +43,41 @@ jobs:
           git \
           wget
 
+    # Download LAME
+    - name: Download and extract LAME
+      run: |
+        wget "https://sourceforge.net/projects/lame/files/lame/$LAME_VERSION/lame-$LAME_VERSION.tar.gz" -O lame.tar.gz
+        tar -xzf lame.tar.gz
+        mv lame-$LAME_VERSION lame
+        rm lame.tar.gz
+        echo "LAME_SOURCE_DIR=$GITHUB_WORKSPACE/lame" >> $GITHUB_ENV
+
+        mkdir -p lame-build
+        echo "LAME_BUILD_DIR=$GITHUB_WORKSPACE/lame-build" >> $GITHUB_ENV
+
     # Clone FFmpeg
     - name: Clone FFmpeg
       run: |
         git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
         echo "FFMPEG_SOURCE_DIR=$GITHUB_WORKSPACE/ffmpeg" >> $GITHUB_ENV
 
-    - name: Create build lame directory
-      run: |
         mkdir -p ffmpeg-build
         echo "FFMPEG_BUILD_DIR=$GITHUB_WORKSPACE/ffmpeg-build" >> $GITHUB_ENV
-        
-    - name: Set executable permissions
-      run: |
-        chmod +x android.sh
-        
+
     # Build
-    - name: Build FFmpeg
+    - name: Build FFmpeg with LAME
       run: |
         set -x
-        echo "Parametro arch: ${{ matrix.arch }}"
+        echo "Building for ${{ matrix.arch }}"
+        chmod +x ./android.sh
         ./android.sh "${{ matrix.arch }}"
 
-    - name: Verify FFmpeg
+    - name: Verify FFmpeg and LAME libraries
       run: |
+        echo "=== LAME libraries ==="
+        ls -la "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
+        file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.a
+
         echo "=== FFmpeg libraries ==="
         ls -la "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
         file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.a
@@ -83,4 +89,5 @@ jobs:
         name: ffmpeg-${{ matrix.arch }}
         path: |
           ffmpeg-build/${{ env.ANDROID_API_LEVEL }}/${{ matrix.arch }}
+          lame-build/${{ env.ANDROID_API_LEVEL }}/${{ matrix.arch }}
         compression-level: 9
