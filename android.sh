@@ -152,7 +152,7 @@ for ARCH in "${ARCH_LIST[@]}"; do
             template_FFMPEG=("x86_64" "x86-64" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
             
         "x86"|"i686")
-            template_FFMPEG=("i686" "i686" "i686" "" " -march=core2 -msse3" "--disable-asm" "x86") ;;template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86") ;;
+            template_FFMPEG=("i686" "i686" "i686" "" " -march=core2 -msse3" "--disable-asm" "x86") ;;
             
         * )
             echo "Unknown architecture: $ARCH"
