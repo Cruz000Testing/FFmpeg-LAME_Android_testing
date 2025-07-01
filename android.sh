@@ -133,13 +133,14 @@ compile_function() {
     echo "=== Configuración Aplicada ==="
     echo "${CONFIG}"
     echo "============================="
-
+    
     # Verificar que el compilador funciona
     echo "int main() { return 0; }" > test.c
-    $CC test.c -o test || {
+    if ! $CC test.c -o test; then
         echo "❌ El compilador no funciona"
         $CC -v
         exit 1
+    fi
     
     # Ejecutar con evaluación segura
     echo "🛠️  Ejecutando configuración..."
