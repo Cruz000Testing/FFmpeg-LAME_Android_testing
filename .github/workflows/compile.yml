@@ -1,0 +1,96 @@
+name: Build FFmpeg with LAME support
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  LAME_VERSION: "3.100"
+  ANDROID_API_LEVEL: 25
+  NDK_VERSION: r27c
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64-v8a, armeabi-v7a, x86_64, x86]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # NDK setup
+    - name: Set up Android NDK
+      id: setup-ndk
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: ${{ env.NDK_VERSION }}
+        add-to-path: true
+
+    # Dependencies
+    - name: Install build tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          nasm \
+          git \
+          wget
+
+    # Download LAME
+    - name: Download and extract LAME
+      run: |
+        wget "https://sourceforge.net/projects/lame/files/lame/$LAME_VERSION/lame-$LAME_VERSION.tar.gz" -O lame.tar.gz
+        tar -xzf lame.tar.gz
+        mv lame-$LAME_VERSION lame
+        rm lame.tar.gz
+
+        echo "LAME_SOURCE_DIR=$GITHUB_WORKSPACE/lame" >> $GITHUB_ENV
+        echo "LAME_BUILD_DIR=$GITHUB_WORKSPACE/lame-build" >> $GITHUB_ENV
+        mkdir -p lame-build
+
+    # Clone FFmpeg
+    - name: Clone FFmpeg
+      run: |
+        git clone --depth 1 https://github.com/FFmpeg/FFmpeg.git ffmpeg
+
+        echo "FFMPEG_SOURCE_DIR=$GITHUB_WORKSPACE/ffmpeg" >> $GITHUB_ENV
+        echo "FFMPEG_BUILD_DIR=$GITHUB_WORKSPACE/ffmpeg-build" >> $GITHUB_ENV
+        mkdir -p ffmpeg-build
+
+    # Build
+    - name: Build FFmpeg with LAME
+      run: |
+        set -e
+        echo "Building for ${{ matrix.arch }}"
+        chmod +x ./android.sh
+        ./android.sh ${{ matrix.arch }}
+        
+        # Verify build
+        ls -la ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib
+
+    - name: Verify FFmpeg binary and LAME
+      run: |
+        echo "=== LAME libraries ==="
+        ls -la "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
+        file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.so
+
+        echo "=== FFmpeg binary ==="
+        file "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg"
+        "ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/bin/ffmpeg" -version
+
+    # Upload artifacts
+    - name: Upload FFmpeg artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ffmpeg-${{ matrix.arch }}
+        path: |
+          ffmpeg-build/$ANDROID_API_LEVEL/${{ matrix.arch }}
+          lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}
+        compression-level: 9
