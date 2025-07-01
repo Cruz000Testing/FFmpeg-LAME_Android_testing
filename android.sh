@@ -38,29 +38,7 @@ ENABLED_CONFIG="\
     --enable-decoder=png \
     --enable-bsf=mp3_header \
     --enable-swresample \
-    --enable-shared"
-
-### Disabled FFmpeg Features ###
-# Explicitly disabled components to reduce binary size
-# and remove unnecessary dependencies
-DISABLED_CONFIG="\
-    --disable-video \
-    --disable-avfilter \
-    --disable-swscale \
-    --disable-postproc \
-    --disable-avdevice \
-    --disable-network \
-    --disable-ffplay \
-    --disable-ffprobe \
-    --disable-doc \
-    --disable-zlib \
-    --disable-cuda-llvm \
-    --disable-static \
-    --disable-debug \
-    --disable-v4l2-m2m \
-    --disable-indevs \
-    --disable-libxml2 \
-    --disable-symver"
+    --enable-static"
 
 ############### Internal Configuration - Do Not Modify ###############
 ############### (Automatically set by build system) ###############
@@ -132,7 +110,6 @@ EXTRA_CXXFLAGS=$EXTRA_CFLAGS
     --extra-ldflags=" -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments $COMMON_LDFLAGS" \
     --enable-pic \
     ${ENABLED_CONFIG} \
-    ${DISABLED_CONFIG} \
     --ar="$AR" \
     --nm="$NM" \
     --ranlib="$RANLIB" \
