@@ -85,5 +85,5 @@ jobs:
       with:
         name: lame-${{ matrix.arch }}
         path: |
-          lame-build/${ANDROID_API_LEVEL}/${{ matrix.arch }}
+          lame-build/${{ env.ANDROID_API_LEVEL }}/${{ matrix.arch }}
         compression-level: 9
