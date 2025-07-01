@@ -133,6 +133,13 @@ compile_function() {
     echo "=== Configuración Aplicada ==="
     echo "${CONFIG}"
     echo "============================="
+
+    # Verificar que el compilador funciona
+    echo "int main() { return 0; }" > test.c
+    $CC test.c -o test || {
+        echo "❌ El compilador no funciona"
+        $CC -v
+        exit 1
     
     # Ejecutar con evaluación segura
     echo "🛠️  Ejecutando configuración..."
@@ -168,25 +175,21 @@ compile_function() {
 }
 
 # Configuración de LAME (versión robusta)
-CONFIGURE_LAME=$(cat << 'END'
+read -r -d '' CONFIGURE_LAME << 'EOF'
 ./configure \
     --host="${CLANG_PREFIX}" \
     --prefix="${PREFIX}" \
     --disable-shared \
     --enable-static \
     --disable-frontend \
-    --disable-nasm \
-    CFLAGS="${COMMON_CFLAGS} ${EXTRA_CFLAGS}" \
-    CPPFLAGS="-I${TOOLCHAIN_SYSROOT}/usr/include" \
-    LDFLAGS="${COMMON_LDFLAGS}"
-END
-)
+    --disable-nasm
+EOF
 
 FFMPEG_COMMON_EXTRA_CFLAGS="$COMMON_CFLAGS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security"
 FFMPEG_COMMON_EXTRA_CXXFLAGS=$FFMPEG_COMMON_EXTRA_CFLAGS
 
 # Configuración de FFmpeg (versión robusta)
-CONFIGURE_FFMPEG=$(cat << 'END'
+read -r -d '' CONFIGURE_LAME << 'EOF'
 EXTRA_CXXFLAGS="${EXTRA_CFLAGS}"
 LAME_PREFIX="${LAME_BUILD_DIR}/${ANDROID_API_LEVEL}/${ARCH_PREFIX}"
 ./configure \
@@ -211,8 +214,7 @@ LAME_PREFIX="${LAME_BUILD_DIR}/${ANDROID_API_LEVEL}/${ARCH_PREFIX}"
     --ranlib="${RANLIB}" \
     --strip="${STRIP}" \
     ${EXTRA_CONFIG}
-END
-)
+EOF
 
 # Después de definir CONFIGURE_FFMPEG
 echo "=== Verificación Final Antes del Bucle ==="
