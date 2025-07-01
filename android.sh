@@ -114,37 +114,50 @@ compile_function() {
     make install || { echo "Installation failed"; exit 1; }
 }
 
-read -r -d '' CONFIGURE_LAME << 'EOF'
+read -r -d '' CONFIGURE_FFMPEG << 'EOF'
+EXTRA_CXXFLAGS=$EXTRA_CFLAGS
 ./configure \
-    --host=${CLANG_PREFIX} \
+    --disable-everything \
+    --target-os=android \
+    --arch=$TARGET_ARCH \
+    --cpu=$TARGET_CPU \
+    --enable-cross-compile \
+    --cross-prefix="$CROSS_PREFIX" \
+    --cc="$CC" \
+    --cxx="$CXX" \
+    --sysroot="$TOOLCHAIN_SYSROOT" \
     --prefix="$PREFIX" \
-    --disable-shared \
-    --enable-static \
-    --disable-frontend \
-    --disable-nasm \
-    CFLAGS="$COMMON_CFLAGS $EXTRA_CFLAGS" \
-    CPPFLAGS="-I$TOOLCHAIN_SYSROOT/usr/include" \
-    LDFLAGS="$COMMON_LDFLAGS"
+    --extra-cflags="$FFMPEG_COMMON_EXTRA_CFLAGS $EXTRA_CFLAGS " \
+    --extra-cxxflags="$FFMPEG_COMMON_EXTRA_CXXFLAGS -std=c++17 -fexceptions -frtti $EXTRA_CXXFLAGS " \
+    --extra-ldflags=" -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments $COMMON_LDFLAGS" \
+    --enable-pic \
+    ${ENABLED_CONFIG} \
+    ${DISABLED_CONFIG} \
+    --ar="$AR" \
+    --nm="$NM" \
+    --ranlib="$RANLIB" \
+    --strip="$STRIP" \
+    ${EXTRA_CONFIG}
 EOF
 
 for ARCH in "${ARCH_LIST[@]}"; do
     case "$ARCH" in
         "armv8-a"|"aarch64"|"arm64-v8a"|"armv8a")
-            template_LAME=("aarch64" "" "aarch64" "" " -march=armv8-a" "" "arm64-v8a") ;;
+            template_FFMPEG=("aarch64" "armv8-a" "aarch64" "" " -march=armv8-a -mcpu=cortex-a75" "--enable-neon --enable-asm" "arm64-v8a") ;;
             
         "armv7-a"|"armeabi-v7a"|"armv7a")
-            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "" "armeabi-v7a") ;;
+            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
             
         "x86-64"|"x86_64")
-            template_LAME=("x86_64" "" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
+            template_FFMPEG=("x86_64" "x86-64" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
             
         "x86"|"i686")
-            template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86") ;;
+            template_FFMPEG=("i686" "i686" "i686" "" " -march=core2 -msse3" "--disable-asm" "x86") ;;template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86") ;;
             
         * )
             echo "Unknown architecture: $ARCH"
             exit 1 ;;
     esac
-    arch_template "LAME" "${template_LAME[@]}"
+    arch_template "FFMPEG" "${template_FFMPEG[@]}"
     compile_function
 done
