@@ -77,7 +77,7 @@ jobs:
       run: |
         echo "=== LAME libraries ==="
         ls -la "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib"
-        file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.so
+        file "lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}/lib/"*.a
 
     # Upload artifacts
     - name: Upload FFmpeg artifacts
@@ -85,5 +85,5 @@ jobs:
       with:
         name: lame-${{ matrix.arch }}
         path: |
-          lame-build/$ANDROID_API_LEVEL/${{ matrix.arch }}
+          lame-build/${ANDROID_API_LEVEL}/${{ matrix.arch }}
         compression-level: 9
