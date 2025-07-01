@@ -92,6 +92,9 @@ compile_function() {
     make install || { echo "Installation failed"; exit 1; }
 }
 
+FFMPEG_COMMON_EXTRA_CFLAGS="$COMMON_CFLAGS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security"
+FFMPEG_COMMON_EXTRA_CXXFLAGS=$FFMPEG_COMMON_EXTRA_CFLAGS
+
 read -r -d '' CONFIGURE_FFMPEG << 'EOF'
 EXTRA_CXXFLAGS=$EXTRA_CFLAGS
 ./configure \
