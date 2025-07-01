@@ -1,17 +1,5 @@
 #!/bin/bash
 
-# --- Modo de operación ---
-# 1. Si recibe parámetro: compila SOLO esa arquitectura
-# 2. Sin parámetros: compila todas (para ejecución local)
-
-if [ $# -eq 1 ]; then
-    echo "🔧 Modo CI: Compilando arquitectura única $1"
-    ARCH_LIST=("$1")
-else
-    echo "🔧 Modo local: Compilando todas las arquitecturas"
-    ARCH_LIST=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
-fi
-
 ### Configuration Notes ###
 # Android API level and target architectures are now defined in compile.yml
 # for GitHub Actions automation. Uncomment and modify below if running locally.
@@ -28,6 +16,8 @@ ENABLED_CONFIG="\
     --enable-avutil \
     --enable-muxer=mp3 \
     --enable-gpl \
+    --enable-encoder=libmp3lame \
+    --enable-libmp3lame \
     --enable-demuxer=mov \
     --enable-demuxer=matroska \
     --enable-parser=aac \
@@ -90,13 +80,28 @@ compile_function() {
     make install || { echo "Installation failed"; exit 1; }
 }
 
+read -r -d '' CONFIGURE_LAME << 'EOF'
+./configure \
+    --host=${CLANG_PREFIX} \
+    --prefix=$PREFIX \
+    --disable-shared \
+    --enable-static \
+    --disable-frontend \
+    --disable-nasm \
+    CFLAGS="$COMMON_CFLAGS $EXTRA_CFLAGS" \
+    CPPFLAGS="-I$TOOLCHAIN_SYSROOT/usr/include" \
+    LDFLAGS="$COMMON_LDFLAGS"
+EOF
+
 FFMPEG_COMMON_EXTRA_CFLAGS="$COMMON_CFLAGS -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D__BIONIC_NO_PAGE_SIZE_MACRO -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security"
 FFMPEG_COMMON_EXTRA_CXXFLAGS=$FFMPEG_COMMON_EXTRA_CFLAGS
 
 read -r -d '' CONFIGURE_FFMPEG << 'EOF'
 EXTRA_CXXFLAGS=$EXTRA_CFLAGS
+LAME_PREFIX=${LAME_BUILD_DIR}/$ANDROID_API_LEVEL/$ARCH_PREFIX
 ./configure \
     --disable-everything \
+    --disable-shared \
     --target-os=android \
     --arch=$TARGET_ARCH \
     --cpu=$TARGET_CPU \
@@ -106,9 +111,9 @@ EXTRA_CXXFLAGS=$EXTRA_CFLAGS
     --cxx="$CXX" \
     --sysroot="$TOOLCHAIN_SYSROOT" \
     --prefix="$PREFIX" \
-    --extra-cflags="$FFMPEG_COMMON_EXTRA_CFLAGS $EXTRA_CFLAGS " \
-    --extra-cxxflags="$FFMPEG_COMMON_EXTRA_CXXFLAGS -std=c++17 -fexceptions -frtti $EXTRA_CXXFLAGS " \
-    --extra-ldflags=" -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments $COMMON_LDFLAGS" \
+    --extra-cflags="$FFMPEG_COMMON_EXTRA_CFLAGS $EXTRA_CFLAGS -I$LAME_PREFIX/include" \
+    --extra-cxxflags="$FFMPEG_COMMON_EXTRA_CXXFLAGS -std=c++17 -fexceptions -frtti $EXTRA_CXXFLAGS" \
+    --extra-ldflags=" -Wl,-z,max-page-size=16384 -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments $COMMON_LDFLAGS -L$LAME_PREFIX/lib -lmp3lame" \
     --enable-pic \
     ${ENABLED_CONFIG} \
     --ar="$AR" \
@@ -121,21 +126,28 @@ EOF
 for ARCH in "${ARCH_LIST[@]}"; do
     case "$ARCH" in
         "armv8-a"|"aarch64"|"arm64-v8a"|"armv8a")
+            template_LAME=("aarch64" "" "aarch64" "" " -march=armv8-a" "" "arm64-v8a")
             template_FFMPEG=("aarch64" "armv8-a" "aarch64" "" " -march=armv8-a -mcpu=cortex-a75" "--enable-neon --enable-asm" "arm64-v8a") ;;
             
         "armv7-a"|"armeabi-v7a"|"armv7a")
-            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=hard" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
+            template_LAME=("arm" "" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "" "armeabi-v7a")
+            template_FFMPEG=("arm" "armv7-a" "armv7a" "eabi" " -march=armv7-a -mfpu=neon -mfloat-abi=softfp" "--enable-neon --disable-armv5te" "armeabi-v7a") ;;
             
         "x86-64"|"x86_64")
+            template_LAME=("x86_64" "" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64")
             template_FFMPEG=("x86_64" "x86-64" "x86_64" "" " -march=x86-64 -msse4.2 -mpopcnt" "" "x86_64") ;;
             
         "x86"|"i686")
+            template_LAME=("i686" "" "i686" "" " -march=core2 -msse3 -mfpmath=sse" "" "x86")
             template_FFMPEG=("i686" "i686" "i686" "" " -march=core2 -msse3" "--disable-asm" "x86") ;;
             
         * )
             echo "Unknown architecture: $ARCH"
             exit 1 ;;
     esac
+    arch_template "LAME" "${template_LAME[@]}"
+    compile_function
+    
     arch_template "FFMPEG" "${template_FFMPEG[@]}"
     compile_function
 done
