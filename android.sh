@@ -251,6 +251,6 @@ for ARCH in "${ARCH_LIST[@]}"; do
     arch_template "LAME" "${template_LAME[@]}"
     compile_function
     
-    arch_template "FFMPEG" "${template_FFMPEG[@]}"
-    compile_function
+    #arch_template "FFMPEG" "${template_FFMPEG[@]}"
+    #compile_function
 done
