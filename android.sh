@@ -4,18 +4,6 @@
 # Android API level and target architectures are now defined in compile.yml
 # for GitHub Actions automation. Uncomment and modify below if running locally.
 
-# --- Modo de operación ---
-# 1. Si recibe parámetro: compila SOLO esa arquitectura
-# 2. Sin parámetros: compila todas (para ejecución local)
-
-if [ $# -eq 1 ]; then
-    echo "🔧 Modo CI: Compilando arquitectura única $1"
-    ARCH_LIST=("$1")
-else
-    echo "🔧 Modo local: Compilando todas las arquitecturas"
-    ARCH_LIST=("arm64-v8a" "armeabi-v7a" "x86" "x86_64")
-fi
-
 # Default values (match those in compile.yml):
 # ANDROID_API_LEVEL="25"
 # ARCH_LIST=("armv8a" "armv7a" "x86" "x86-64")
