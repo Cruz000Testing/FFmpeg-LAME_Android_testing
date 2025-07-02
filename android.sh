@@ -4,9 +4,11 @@
 # Android API level and target architectures are now defined in compile.yml
 # for GitHub Actions automation. Uncomment and modify below if running locally.
 
+ARCH_LIST=("$@")
+
 # Default values (match those in compile.yml):
-# ANDROID_API_LEVEL="25"
-# ARCH_LIST=("armv8a" "armv7a" "x86" "x86-64")
+# ANDROID_API_LEVEL=25
+# ARCH_LIST+=("armv8a" "armv7a" "x86" "x86-64")
 
 ### Essential FFmpeg Build Modules ###
 # Minimal configuration for MP3 encoding with metadata support from source files.
@@ -28,8 +30,8 @@ ENABLED_CONFIG="\
     --enable-swresample \
     --enable-static"
 
-############### Internal Configuration - Do Not Modify ###############
-############### (Automatically set by build system) ###############
+############### Internal Configuration Below - Do Not Modify ###############
+###############     (Automatically set by build system)      ###############
 
 ## ANDROID_NDK_PATH="/home/a/Desktop/Custom-Files/ffmpeg-compile/ndk/android-ndk-r27c"
 ## LAME_SOURCE_DIR="/home/a/Desktop/Custom-Files/ffmpeg-compile/lame-3.1.1"
